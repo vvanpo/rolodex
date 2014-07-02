@@ -6,11 +6,14 @@ __author__ = "Victor van Poppelen"
 
 import sqlite3
 
+class vCard(object):
+	def __init__(self):
+		self.version="4.0"
+
 class Rolodex(object):
 	def __init__(self, filename):
 		self.conn = sqlite3.connect(filename)
 		self.cursor = self.conn.cursor()
-		self.vcard_version="4.0"
 	def __enter__(self):
 		return self
 	def __exit__(self, exc_type, exc_value, traceback):
