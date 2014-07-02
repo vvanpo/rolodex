@@ -4,8 +4,23 @@
 
 __author__ = "Victor van Poppelen"
 
+import sqlite3
+
+class Rolodex(object):
+	def __init__(self, filename):
+		self.conn = sqlite3.connect(filename)
+		self.cursor = self.conn.cursor()
+		self.vcard_version="4.0"
+	def __enter__(self):
+		return self
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.conn.close()
+	def dump(self, name):
+		"""Dumps RFC6350-complying file"""
+
 def main():
-	pass
+	with Rolodex("contacts.db") as r:
+		r.dump("Victor van Poppelen")
 
 if __name__ == "__main__":
 	main()
