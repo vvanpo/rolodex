@@ -54,3 +54,6 @@ docs/_build/
 
 # sqlite
 *.db
+
+# vim
+.*.swp
