@@ -4,11 +4,7 @@
 
 __author__ = "Victor van Poppelen"
 
-import sqlite3
-
-class vCard(object):
-	def __init__(self):
-		self.version="4.0"
+import sqlite3, vcard
 
 class Rolodex(object):
 	def __init__(self, filename):
