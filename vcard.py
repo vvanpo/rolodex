@@ -11,11 +11,10 @@ version="4.0"
 class vCard(object):
 	def load(self, stream):
 		# "Core" ABNF from rfc5234
-		CRLF = pp.Literal("\r\n")  # .leaveWhitespace()  ??
-		DQUOTE = pp.Literal('"')
+		CRLF = pp.Literal("\r\n")
 	#	VCHAR = 
-	#	WSP = 
-		vcard_entity = pp.OneOrMore(vcard)
+		WSP = pp.Word(" \t", exact=1)
+		NON_ASCII = 
 		vcard = pp.Literal("BEGIN:VCARD") + CRLF + pp.Literal("VERSION:" + \
 				version) + CRLF + pp.OneOrMore(contentline) + \
 				pp.Literal("END:VCARD") + CRLF
@@ -26,23 +25,20 @@ class vCard(object):
 		name = pp.oneOf("SOURCE KIND FN N NICKNAME PHOTO BDAY ANNIVERSARY \
 				GENDER ADR TEL EMAIL IMPP LANG TZ GEO TITLE ROLE LOGO ORG \
 				MEMBER RELATED CATEGORIES NOTE PRODID REV SOUND UID \
-				CLIENTPIDMAP URL KEY FBURL CALADRURI CALURI XML", \
+				CLIENTPIDMAP URL KEY FBURL CALADRURI CALURI XML".split(), \
 				caseless=True) | iana-token | x-name
 		iana-token = group
-		x-name = pp.oneOf("x- X-") + group
+		x-name = pp.oneOf(["x-", "X-"]) + group
 		param = language_param | value_param | pref_param | pid_param | \
 				type_param | geo_parameter | tz_parameter | sort_as_param | \
 				calscale_param | any_param
-		param_value = SAFE_CHARS | (DQUOTE + QSAFE_CHARS + DQUOTE)
-		any_param = (iana-token | x-name) + pp.Literal("=") + param-value + \
+		param_value = pp.CharsNotIn('"') | pp.QuotedString('"')
+		any_param = (iana-token | x-name) + pp.Literal("=") + param_value + \
 				pp.ZeroOrMore(pp.Literal(",") + param_value)
-		NON_ASCII = UTF8_2 | UTF8_3 | UTF8_4
-		# As defined in rfc3629
-		UTF8_2
-		UTF8_3
-		UTF8_4
-		QSAFE_CHARS = pp.ZeroOrMore(
 		value = 
+
+
+		vcard_entity = pp.OneOrMore(vcard).leaveWhitespace()
 	def dump(self):
 		pass
 
