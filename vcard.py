@@ -51,6 +51,27 @@ class vCard(object):
 		vcard_entity.parseString(stream)
 	def dump(self):
 		print(self.vcard)
+	def findProperty(self, name, value, group=None, params=dict()):
+		for v in self.vcard:
+			for p in v:
+				if p["name"].upper() != name.upper():
+					continue
+				if p["property value"] != value:
+					continue
+				if group != None and p["group"] != group:
+					continue
+				if len(params) > 0:
+					for a in params:
+						pass
+	def findFN(self, fn):
+		return self.findProperty("FN", fn)
+	def listProperty(self, name, group=None, params=tuple()):
+		properties = []
+		for v in self.vcard:
+			for p in v:
+				if p["name"].upper() == name.upper():
+					properties.append(p)
+		return properties
 
 example = """BEGIN:VCARD\r
 VERSION:4.0\r
@@ -83,4 +104,4 @@ CLIENTPIDMAP:1;urn:uuid:53e374d9-337e-4727-8803-a1e9c14e0556\r
 END:VCARD\r
 """
 test = vCard(example)
-test.dump()
+print(test.findFN("Simon Perreault"))
