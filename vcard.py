@@ -15,63 +15,65 @@ class vCard(object):
 		self.vcard = []
 
 		crlf = pp.Literal("\r\n").suppress()
-		begin = pp.Literal("BEGIN:VCARD")
+		begin = pp.Literal("BEGIN:VCARD").suppress()
 		begin.setParseAction(lambda: self.vcard.append([]))
-		ver = pp.Literal("VERSION:" + version)
-		def endAction():
-			for p in self.vcard[-1]:
-				if p["name"].upper() == "FN":
-					return
-			raise Exception("FN property required in vcard")
-		end = pp.Literal("END:VCARD")
-		end.setParseAction(endAction)
+		ver = pp.Literal("VERSION:" + version).suppress()
+		end = pp.Literal("END:VCARD").suppress()
 		folded = ~end + pp.Combine(pp.OneOrMore(pp.Word(pp.printables + " \t") \
 				| pp.Suppress(pp.Literal("\r\n ") | pp.Literal("\r\n\t")))) + \
 				crlf
 		vcard = begin + crlf + ver + crlf + pp.OneOrMore(folded) + end + crlf
-		vcard_entity = pp.OneOrMore(vcard)
+		vcard_entity = pp.OneOrMore(pp.Group(vcard))
 #		vcard_entity.setDebug()
 
-		identifier = lambda n: pp.Word(pp.alphanums + "-").setResultsName(n)
-		group = identifier("group")
-		name = identifier("name")
+		identifier = lambda: pp.Word(pp.alphanums + "-").copy()
+		group = identifier().setResultsName("group")
+		name = identifier().setResultsName("name")
 		param_value = pp.CharsNotIn('":;') | pp.QuotedString('"')
-		param_value.setResultsName("parameter value")
-		param = identifier("parameter") + pp.Literal("=").suppress() + \
-				param_value + pp.ZeroOrMore(pp.Literal(",") + param_value)
+		param = identifier() + pp.Literal("=").suppress() + param_value + \
+				pp.ZeroOrMore(pp.Literal(",") + param_value)
+		params = pp.ZeroOrMore(pp.Group(pp.Literal(";").suppress() + \
+				param)).setResultsName("parameters")
 		value = pp.Word(pp.printables + " \t").setResultsName("property value")
 		contentline = pp.Optional(group + pp.Literal(".").suppress()) + name + \
-				pp.ZeroOrMore(pp.Literal(";").suppress() + param) + \
-				pp.Literal(":").suppress() + value
+				params + pp.Literal(":").suppress() + value
 
 		def propertyAction(tok):
-			v = dict(contentline.parseString(tok[0]))
+			v = contentline.parseString(tok[0]).asDict()
 			self.vcard[-1].append(v)
-		folded.setParseAction(propertyAction)
-		vcard_entity.parseString(stream)
+			return v
+		#folded.setParseAction(propertyAction)
+		print(vcard_entity.parseString(stream).asList())
 	def dump(self):
-		print(self.vcard)
-	def findProperty(self, name, value, group=None, params=dict()):
+		return self.vcard
+	def _iterate(self, action, name=None, group=None, params=tuple()):
+		ret = None
 		for v in self.vcard:
 			for p in v:
-				if p["name"].upper() != name.upper():
+				if name != None and p["name"].upper() != name.upper():
 					continue
-				if p["property value"] != value:
-					continue
-				if group != None and p["group"] != group:
+				if group != None and p["group"] != group.upper():
 					continue
 				if len(params) > 0:
-					for a in params:
+					for k in params:
 						pass
-	def findFN(self, fn):
-		return self.findProperty("FN", fn)
+				a = action(p, v)
+				if a != None:
+					ret = a
+		return ret
 	def listProperty(self, name, group=None, params=tuple()):
 		properties = []
-		for v in self.vcard:
-			for p in v:
-				if p["name"].upper() == name.upper():
-					properties.append(p)
-		return properties
+		def action(p, v):
+			properties.append(p)
+			return properties
+		return self._iterate(action, name, group, params)
+	def findByProperty(self, name, value, group=None, params=tuple()):
+		def action(p, v):
+			if p["property value"] == value:
+				return v
+		return self._iterate(action, name, group, params)
+	def findByFN(self, fn):
+		return self.findByProperty("FN", fn)
 
 example = """BEGIN:VCARD\r
 VERSION:4.0\r
@@ -103,5 +105,7 @@ EMAIL;PID=1.1:jdoe@example.com\r
 CLIENTPIDMAP:1;urn:uuid:53e374d9-337e-4727-8803-a1e9c14e0556\r
 END:VCARD\r
 """
+
 test = vCard(example)
-print(test.findFN("Simon Perreault"))
+#print(test.findByFN("Simon Perreault"))
+print(test.listProperty("TEL"))
